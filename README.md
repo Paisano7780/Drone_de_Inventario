@@ -77,6 +77,12 @@ All core logic is fully tested:
 
 The easiest way to get the APK is through our automated GitHub Actions workflow:
 
+**Direct download from release folder (easiest):**
+1. **Navigate to the `release/` folder** in the repository
+2. **Download**: Click on the latest `DroneInventoryScanner-vX.X-debug.apk` file
+3. **Done**: The APK is ready to install on your device
+
+**From Actions artifacts:**
 1. **Navigate to Actions tab** in the repository
 2. **Latest build**: Click on the most recent "Build APK" workflow run
 3. **Download**: Scroll to "Artifacts" section and download `app-debug`
@@ -86,13 +92,13 @@ The easiest way to get the APK is through our automated GitHub Actions workflow:
 1. Go to **Actions** → **Build APK** workflow
 2. Click **Run workflow** → **Run workflow** button
 3. Wait for build to complete (~3-5 minutes)
-4. Download APK from Artifacts
+4. Download APK from `release/` folder, Artifacts, or Releases
 
 **Create a release:**
 1. Go to **Actions** → **Build Release APK** workflow
 2. Click **Run workflow**
 3. Enter version (e.g., `1.0.0`)
-4. The APK will be published in **Releases** section
+4. The APK will be published in `release/` folder and **Releases** section
 
 ### Option 2: Local Build
 
