@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="24dp"
+    android:background="@color/dark_background"
+    tools:context=".ui.MainActivity">
+
+    <TextView
+        android:id="@+id/tvConnectionLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/connection_status"
+        android:textSize="18sp"
+        android:textColor="@color/dark_on_surface"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="32dp" />
+
+    <TextView
+        android:id="@+id/tvConnectionStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/disconnected"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:textColor="@color/status_disconnected"
+        app:layout_constraintTop_toBottomOf="@id/tvConnectionLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="8dp" />
+
+    <TextView
+        android:id="@+id/tvLastScannedLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/last_scanned"
+        android:textSize="18sp"
+        android:textColor="@color/dark_on_surface"
+        app:layout_constraintTop_toBottomOf="@id/tvConnectionStatus"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_marginTop="48dp" />
+
+    <TextView
+        android:id="@+id/tvLastScannedCode"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/none"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        android:textColor="@color/dark_primary"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/tvLastScannedLabel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp"
+        android:padding="16dp"
+        android:background="@color/dark_surface" />
+
+    <Button
+        android:id="@+id/btnConnectScanner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/connect_scanner"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/tvLastScannedCode"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="48dp" />
+
+    <Button
+        android:id="@+id/btnExportCsv"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/export_csv"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/btnConnectScanner"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
