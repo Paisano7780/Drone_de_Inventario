@@ -1,0 +1,103 @@
+name: Build Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version name (e.g., 1.0.0)'
+        required: false
+        default: '1.0'
+      
+jobs:
+  build-release:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Run unit tests
+        run: ./gradlew -b build-simple.gradle.kts test --no-daemon
+        
+      - name: Build Debug APK (unsigned)
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        
+      - name: Rename APK with version
+        run: |
+          VERSION="${{ github.event.inputs.version_name }}"
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/DroneInventoryScanner-v${VERSION}-debug.apk"
+          fi
+          
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DroneInventoryScanner-debug-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
+          retention-days: 90
+          
+      - name: Create Release
+        if: success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.event.inputs.version_name }}
+          name: DroneInventoryScanner v${{ github.event.inputs.version_name }}
+          body: |
+            ## DroneInventoryScanner v${{ github.event.inputs.version_name }}
+            
+            ### Features
+            - ✅ Bluetooth SPP connection to ring scanners
+            - ✅ Foreground service for background operation
+            - ✅ Auto-reconnection (5 attempts)
+            - ✅ Text-to-Speech audio feedback
+            - ✅ Duplicate detection
+            - ✅ CSV export to Documents/DroneScans
+            - ✅ Dark mode UI
+            
+            ### Installation
+            1. Download the APK below
+            2. Enable "Install from unknown sources" on your Android device
+            3. Install the APK
+            4. Grant Bluetooth and notification permissions
+            
+            ### Usage
+            1. Pair your Bluetooth scanner in Android settings
+            2. Open the app and tap "Connect Scanner"
+            3. Select your scanner from the list
+            4. Start scanning barcodes
+            
+            **Tested on:** Xiaomi Redmi Note 13 Pro
+            **Compatible with:** Generic Eyoyo/Ring Scanners (SPP mode)
+          files: |
+            app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build Summary
+        if: success()
+        run: |
+          echo "### 🎉 Release Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** v${{ github.event.inputs.version_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            APK_SIZE=$(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)
+            echo "**APK Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 APK available in **Artifacts** and **Releases**" >> $GITHUB_STEP_SUMMARY

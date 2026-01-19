@@ -1,0 +1,57 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - main
+      - copilot/**
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Run unit tests
+        run: ./gradlew -b build-simple.gradle.kts test --no-daemon
+        
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          
+      - name: Get APK info
+        if: success()
+        run: |
+          echo "### ✅ APK Build Successful" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Location:** \`app/build/outputs/apk/debug/app-debug.apk\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            APK_SIZE=$(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)
+            echo "**APK Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📦 Download the APK from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
+          fi
