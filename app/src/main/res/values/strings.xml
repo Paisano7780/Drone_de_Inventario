@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DroneInventoryScanner</string>
+    <string name="connection_status">Connection Status:</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connected">Connected</string>
+    <string name="connecting">Connecting…</string>
+    <string name="last_scanned">Last Scanned Code:</string>
+    <string name="none">None</string>
+    <string name="export_csv">Export CSV</string>
+    <string name="connect_scanner">Connect Scanner</string>
+    <string name="disconnect_scanner">Disconnect</string>
+    <string name="scanner_service_notification">Scanner Active</string>
+    <string name="scanner_service_description">Listening for barcode scans</string>
+    <string name="notification_channel_name">Scanner Service</string>
+    <string name="notification_channel_description">Shows when scanner is running in background</string>
+    <string name="exported_successfully">CSV exported successfully</string>
+    <string name="export_failed">Failed to export CSV</string>
+    <string name="no_data_to_export">No scans to export</string>
+    <string name="select_device">Select Scanner Device</string>
+    <string name="no_paired_devices">No paired Bluetooth devices found</string>
+    <string name="bluetooth_not_available">Bluetooth not available</string>
+    <string name="permission_required">Bluetooth permission required</string>
+</resources>
