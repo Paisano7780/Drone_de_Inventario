@@ -46,12 +46,15 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     needs: test
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
         
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -103,6 +106,30 @@ jobs:
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
             cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/DroneInventoryScanner-v${VERSION}-debug.apk"
             echo "✅ APK renamed to DroneInventoryScanner-v${VERSION}-debug.apk" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Commit APK to release folder (main branch only)
+        if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Create release directory if it doesn't exist
+          mkdir -p release
+          
+          # Copy APK to release folder
+          if [ -f app/build/outputs/apk/debug/DroneInventoryScanner-v${VERSION}-debug.apk ]; then
+            cp app/build/outputs/apk/debug/DroneInventoryScanner-v${VERSION}-debug.apk "release/DroneInventoryScanner-v${VERSION}-debug.apk"
+            
+            # Configure git
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            
+            # Add and commit the APK
+            git add release/DroneInventoryScanner-v${VERSION}-debug.apk
+            git commit -m "Add APK v${VERSION} to release folder [skip ci]"
+            git push origin main
+            
+            echo "✅ APK committed to release/ folder" >> $GITHUB_STEP_SUMMARY
           fi
         
       - name: Upload Debug APK
