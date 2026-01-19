@@ -4,10 +4,10 @@ This directory contains automated workflows for building the DroneInventoryScann
 
 ## Available Workflows
 
-### 1. Build APK (`build-apk.yml`)
+### 1. Build APK (`build-apk.yml`) ⭐ Main Workflow
 
 **Triggers:**
-- Push to `main` branch
+- Push to `main` branch (automatic after PR merge)
 - Push to any `copilot/**` branch
 - Pull requests to `main`
 - Manual trigger via GitHub Actions UI
@@ -15,13 +15,30 @@ This directory contains automated workflows for building the DroneInventoryScann
 **What it does:**
 1. Runs unit tests (20 tests)
 2. Builds debug APK
-3. Uploads APK as artifact
+3. **Automatically creates versioned releases when merged to main**
+4. Uploads APK as artifact
 
-**To download the APK:**
-1. Go to the **Actions** tab
-2. Click on the latest workflow run
-3. Scroll down to **Artifacts**
-4. Download `app-debug` artifact
+**Versioning:**
+- First release: `v1.0`
+- Subsequent releases: Auto-increments minor version (`v1.1`, `v1.2`, etc.)
+- Version is determined by latest git tag
+
+**When merged to main:**
+- ✅ Runs unit tests automatically
+- ✅ Compiles APK
+- ✅ Creates GitHub Release with version number
+- ✅ APK available in Releases section
+- ✅ Also available as artifact for 30 days
+
+**To download the APK after merge:**
+1. Go to the **Releases** section (right side of repo page)
+2. Find the latest release (e.g., `v1.0`, `v1.1`)
+3. Download `DroneInventoryScanner-v{version}-debug.apk`
+
+Or from Artifacts:
+1. Go to **Actions** tab
+2. Click on the workflow run
+3. Download artifact from **Artifacts** section
 
 ### 2. Build Release APK (`release-apk.yml`)
 
@@ -31,14 +48,14 @@ This directory contains automated workflows for building the DroneInventoryScann
 **What it does:**
 1. Runs unit tests
 2. Builds debug APK
-3. Creates a GitHub Release with the APK
-4. Tags the release with version number
+3. Creates a GitHub Release with custom version number
+4. Tags the release with specified version
 
-**To create a release:**
+**To create a custom release:**
 1. Go to **Actions** tab
 2. Select "Build Release APK" workflow
 3. Click "Run workflow"
-4. Enter version name (e.g., `1.0.0`)
+4. Enter version name (e.g., `2.0.0`)
 5. Click "Run workflow" button
 
 The APK will be:

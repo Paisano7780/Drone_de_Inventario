@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
         
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -34,24 +36,109 @@ jobs:
         
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
+      
+      - name: Get version info
+        id: version
+        run: |
+          # Get the latest tag or default to v1.0
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.9")
+          # Extract version number (remove 'v' prefix)
+          VERSION=${LATEST_TAG#v}
+          # Split version into parts
+          IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+          MAJOR=${VERSION_PARTS[0]}
+          MINOR=${VERSION_PARTS[1]:-0}
+          
+          # Increment minor version for main branch, keep same for others
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            MINOR=$((MINOR + 1))
+            NEW_VERSION="${MAJOR}.${MINOR}"
+          else
+            NEW_VERSION="${VERSION}"
+          fi
+          
+          echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "tag=v${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "**Version:** ${NEW_VERSION}" >> $GITHUB_STEP_SUMMARY
+        
+      - name: Rename APK with version
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
+            cp app/build/outputs/apk/debug/app-debug.apk "app/build/outputs/apk/debug/DroneInventoryScanner-v${VERSION}-debug.apk"
+            echo "✅ APK renamed to DroneInventoryScanner-v${VERSION}-debug.apk" >> $GITHUB_STEP_SUMMARY
+          fi
         
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-debug-v${{ steps.version.outputs.version }}
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
           retention-days: 30
           
-      - name: Get APK info
+      - name: Create Release (main branch only)
+        if: github.ref == 'refs/heads/main' && success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: DroneInventoryScanner ${{ steps.version.outputs.tag }}
+          body: |
+            ## DroneInventoryScanner ${{ steps.version.outputs.tag }}
+            
+            **Automatic release** created from merge to main branch.
+            
+            ### Features
+            - ✅ Bluetooth SPP connection to ring scanners
+            - ✅ Foreground service for background operation
+            - ✅ Auto-reconnection (5 attempts)
+            - ✅ Text-to-Speech audio feedback
+            - ✅ Duplicate detection
+            - ✅ CSV export to Documents/DroneScans
+            - ✅ Dark mode UI
+            
+            ### Installation
+            1. Download the APK below
+            2. Enable "Install from unknown sources" on your Android device
+            3. Install the APK
+            4. Grant Bluetooth and notification permissions
+            
+            ### Usage
+            1. Pair your Bluetooth scanner in Android settings
+            2. Open the app and tap "Connect Scanner"
+            3. Select your scanner from the list
+            4. Start scanning barcodes
+            
+            **Tested on:** Xiaomi Redmi Note 13 Pro
+            **Compatible with:** Generic Eyoyo/Ring Scanners (SPP mode)
+            
+            ### Build Info
+            - **Commit:** ${{ github.sha }}
+            - **Branch:** ${{ github.ref_name }}
+            - **Built:** ${{ github.run_number }}
+          files: |
+            app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build Summary
         if: success()
         run: |
           echo "### ✅ APK Build Successful" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**APK Location:** \`app/build/outputs/apk/debug/app-debug.apk\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Location:** \`app/build/outputs/apk/debug/DroneInventoryScanner-v${{ steps.version.outputs.version }}-debug.apk\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
             APK_SIZE=$(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)
             echo "**APK Size:** $APK_SIZE" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "📦 **Release created:** Check the [Releases](${{ github.server_url }}/${{ github.repository }}/releases) page" >> $GITHUB_STEP_SUMMARY
+          else
             echo "📦 Download the APK from the **Artifacts** section above." >> $GITHUB_STEP_SUMMARY
           fi

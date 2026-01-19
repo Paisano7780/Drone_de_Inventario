@@ -2,7 +2,38 @@
 
 Esta guía explica cómo obtener el APK compilado usando los workflows automatizados de GitHub Actions.
 
-## 🚀 Opción 1: Descargar APK desde Artifacts (Más Fácil)
+## ⭐ IMPORTANTE: Compilación Automática tras Merge al Main
+
+**Cuando apruebes el Pull Request y se haga merge a la rama `main`:**
+
+✅ El workflow se ejecutará **automáticamente**
+✅ Los tests unitarios se ejecutarán primero
+✅ Se compilará el APK
+✅ Se creará un **Release automático** con número de versión (ej: `v1.0`)
+✅ El APK estará disponible en la sección **Releases**
+
+**Para descargar el APK después del merge:**
+1. Ve a la pestaña **Releases** (lado derecho de la página principal)
+2. Haz clic en el release más reciente (ej: `v1.0`)
+3. Descarga `DroneInventoryScanner-v1.0-debug.apk`
+
+**Versionado automático:**
+- Primera versión: `v1.0`
+- Versiones siguientes: Se incrementa automáticamente (`v1.1`, `v1.2`, etc.)
+
+## 🚀 Opción 1: Descargar APK desde Releases (Después del Merge)
+
+### Paso 1: Ir a Releases
+1. Abre el repositorio en GitHub
+2. En el lado derecho, verás la sección **Releases**
+3. Haz clic en **Releases** o en el número de la última versión
+
+### Paso 2: Descargar el APK
+4. Verás el release más reciente (ej: `DroneInventoryScanner v1.0`)
+5. En la sección **Assets**, haz clic en `DroneInventoryScanner-v1.0-debug.apk`
+6. ¡El APK se descargará directamente!
+
+## 📦 Opción 2: Descargar APK desde Artifacts
 
 ### Paso 1: Ir a la pestaña Actions
 1. Abre el repositorio en GitHub
@@ -16,31 +47,31 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 ### Paso 3: Descargar el APK
 6. Haz clic en la ejecución más reciente (la de arriba)
 7. Desplázate hacia abajo hasta la sección **Artifacts**
-8. Haz clic en **app-debug** para descargar
+8. Haz clic en **app-debug-v1.0** para descargar
 9. Descomprime el archivo ZIP
-10. ¡Ya tienes tu `app-debug.apk`!
+10. ¡Ya tienes tu APK!
 
-## 🔄 Opción 2: Ejecutar un Nuevo Build
+## 🔄 Opción 3: Ejecutar un Nuevo Build Manualmente
 
-### Si quieres compilar una nueva versión:
+### Si quieres compilar una nueva versión manualmente:
 
 1. Ve a **Actions** → **Build APK**
 2. Haz clic en **Run workflow** (botón azul a la derecha)
-3. Selecciona la rama (deja `copilot/create-drone-inventory-scanner`)
+3. Selecciona la rama
 4. Haz clic en **Run workflow**
 5. Espera 3-5 minutos mientras se compila
-6. Descarga desde Artifacts (como en Opción 1)
+6. Descarga desde Artifacts o Releases
 
-## 🎁 Opción 3: Crear un Release Oficial
+## 🎁 Opción 4: Crear un Release con Versión Personalizada
 
-### Para crear una versión oficial con número de versión:
+### Para crear una versión con número específico:
 
 1. Ve a **Actions** → **Build Release APK**
 2. Haz clic en **Run workflow**
-3. Ingresa el número de versión (ejemplo: `1.0.0`)
+3. Ingresa el número de versión (ejemplo: `2.0.0`)
 4. Haz clic en **Run workflow**
 5. Espera a que termine
-6. Ve a la pestaña **Releases** (a la derecha en la página principal)
+6. Ve a la pestaña **Releases**
 7. Verás el release con el APK adjunto
 8. Descarga el APK directamente desde ahí
 
