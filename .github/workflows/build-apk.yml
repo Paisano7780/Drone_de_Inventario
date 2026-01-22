@@ -145,9 +145,28 @@ jobs:
             app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
           retention-days: 30
           
+      - name: Create Git Tag
+        if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Check if tag already exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists, deleting it first"
+            git tag -d "$TAG"
+            git push origin :refs/tags/$TAG || true
+          fi
+          
+          # Create and push the tag
+          git tag -a "$TAG" -m "Release $TAG"
+          git push origin "$TAG"
+          echo "✅ Created and pushed tag: $TAG" >> $GITHUB_STEP_SUMMARY
+      
       - name: Create Release (main branch only)
         if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: DroneInventoryScanner ${{ steps.version.outputs.tag }}
@@ -188,6 +207,7 @@ jobs:
             app/build/outputs/apk/debug/DroneInventoryScanner-*.apk
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
