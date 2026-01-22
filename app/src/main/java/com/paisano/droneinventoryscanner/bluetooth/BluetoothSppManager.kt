@@ -5,7 +5,9 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
@@ -20,6 +22,10 @@ class BluetoothSppManager {
         private const val TAG = "BluetoothSppManager"
         // Standard Serial Port Profile UUID
         val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+        // Connection timeout in milliseconds (increased for RF noise tolerance)
+        private const val CONNECTION_TIMEOUT_MS = 30000L // 30 seconds
+        // Cooldown period before retry in milliseconds
+        private const val RETRY_COOLDOWN_MS = 3000L // 3 seconds
     }
 
     interface ConnectionListener {
@@ -34,6 +40,7 @@ class BluetoothSppManager {
     private var isConnected = false
     private var listener: ConnectionListener? = null
     private var isReading = false
+    private var lastConnectionAttempt = 0L
 
     /**
      * Set the connection listener
@@ -49,6 +56,15 @@ class BluetoothSppManager {
      */
     suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
         try {
+            // Implement smart retry with 3-second cooldown
+            val timeSinceLastAttempt = System.currentTimeMillis() - lastConnectionAttempt
+            if (timeSinceLastAttempt < RETRY_COOLDOWN_MS) {
+                val remainingCooldown = RETRY_COOLDOWN_MS - timeSinceLastAttempt
+                Log.d(TAG, "Cooldown period: waiting ${remainingCooldown}ms before retry")
+                delay(remainingCooldown)
+            }
+            lastConnectionAttempt = System.currentTimeMillis()
+
             // Close existing connection if any
             disconnect()
 
@@ -57,8 +73,26 @@ class BluetoothSppManager {
             // Create socket
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             
-            // Connect
-            bluetoothSocket?.connect()
+            // Connect with timeout to handle RF noise and interference
+            val connectSuccess = try {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    bluetoothSocket?.connect()
+                    true
+                } ?: false
+            } catch (e: IOException) {
+                // Connection failed within timeout period
+                Log.e(TAG, "Connection failed during timeout: ${e.message}", e)
+                false
+            }
+            
+            if (!connectSuccess) {
+                Log.e(TAG, "Connection failed or timeout after ${CONNECTION_TIMEOUT_MS}ms")
+                disconnect()
+                withContext(Dispatchers.Main) {
+                    listener?.onError("Connection timeout")
+                }
+                return@withContext false
+            }
             
             // Get input stream
             inputStream = bluetoothSocket?.inputStream
@@ -138,22 +172,43 @@ class BluetoothSppManager {
 
     /**
      * Disconnect from the device
+     * Force socket cleanup with try-catch to prevent crashes
      */
     fun disconnect() {
         try {
             isReading = false
             isConnected = false
             
-            inputStream?.close()
-            inputStream = null
+            // Close input stream with explicit error handling
+            try {
+                inputStream?.close()
+            } catch (e: IOException) {
+                Log.w(TAG, "Error closing input stream: ${e.message}")
+            } finally {
+                inputStream = null
+            }
             
-            bluetoothSocket?.close()
-            bluetoothSocket = null
+            // Force socket cleanup - close even if it appears null or closed
+            try {
+                bluetoothSocket?.close()
+            } catch (e: IOException) {
+                Log.w(TAG, "Error closing socket: ${e.message}")
+            } finally {
+                bluetoothSocket = null
+            }
             
-            Log.d(TAG, "Disconnected")
+            Log.d(TAG, "Disconnected and cleaned up resources")
             listener?.onDisconnected()
         } catch (e: IOException) {
-            Log.e(TAG, "Error disconnecting: ${e.message}", e)
+            Log.e(TAG, "IO error during disconnect: ${e.message}", e)
+            // Ensure resources are cleared even if error occurs
+            inputStream = null
+            bluetoothSocket = null
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security error during disconnect: ${e.message}", e)
+            // Ensure resources are cleared even if error occurs
+            inputStream = null
+            bluetoothSocket = null
         }
     }
 
