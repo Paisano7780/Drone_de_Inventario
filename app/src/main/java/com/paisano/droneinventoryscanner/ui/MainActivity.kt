@@ -22,6 +22,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.paisano.droneinventoryscanner.R
 import com.paisano.droneinventoryscanner.databinding.ActivityMainBinding
 import com.paisano.droneinventoryscanner.service.ScannerService
+import com.paisano.droneinventoryscanner.session.SessionManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -70,6 +71,9 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize SessionManager
+        SessionManager.init(this)
         
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -255,26 +259,16 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
         }
 
         try {
-            // Create directory in Documents/DroneScans
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val droneScansDir = File(documentsDir, "DroneScans")
+            // Get filename prefix from session
+            val filenamePrefix = SessionManager.getFilenamePrefix()
             
-            if (!droneScansDir.exists()) {
-                droneScansDir.mkdirs()
-            }
-
-            // Create filename with timestamp
-            val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-            val timestamp = dateFormat.format(Date())
-            val filename = "drone_scans_$timestamp.csv"
-            val file = File(droneScansDir, filename)
-
-            // Export
-            val success = repository.exportToCsv(file)
+            // Export to Downloads folder
+            val (success, filename) = repository.exportToCsvInDownloads(filenamePrefix)
             
-            if (success) {
+            if (success && filename != null) {
                 viewModel.setExportResult(true)
-                Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                val message = getString(R.string.saved_in_downloads, filename)
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             } else {
                 viewModel.setExportResult(false, getString(R.string.export_failed))
             }

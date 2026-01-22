@@ -60,7 +60,7 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
     private val bluetoothManager: IScannerManager by lazy {
         scannerManagerFactory?.invoke() ?: BluetoothSppManager()
     }
-    private val scanRepository by lazy { ScanRepository() }
+    private val scanRepository by lazy { ScanRepository(this) }
     private val dataParser by lazy { DataParser() }
     
     private var textToSpeech: TextToSpeech? = null
@@ -211,7 +211,7 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         Log.d(TAG, "Connected to scanner")
         reconnectAttempts = 0
         updateNotification("Scanner Connected")
-        speak("Correct")
+        speak("Escáner Conectado")
         listener?.onConnectionStatusChanged(true)
     }
 
@@ -261,12 +261,14 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            val result = textToSpeech?.setLanguage(Locale.US)
+            // Set language to Spanish
+            val result = textToSpeech?.setLanguage(Locale("es", "ES"))
             if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                Log.e(TAG, "TTS language not supported")
+                Log.e(TAG, "TTS Spanish language not supported, falling back to default")
+                textToSpeech?.setLanguage(Locale.getDefault())
             } else {
                 ttsInitialized = true
-                Log.d(TAG, "TTS initialized successfully")
+                Log.d(TAG, "TTS initialized successfully with Spanish")
             }
         } else {
             Log.e(TAG, "TTS initialization failed")

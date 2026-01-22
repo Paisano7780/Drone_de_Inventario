@@ -1,24 +1,48 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DroneInventoryScanner</string>
-    <string name="connection_status">Connection Status:</string>
-    <string name="disconnected">Disconnected</string>
-    <string name="connected">Connected</string>
-    <string name="connecting">Connecting…</string>
-    <string name="last_scanned">Last Scanned Code:</string>
-    <string name="none">None</string>
-    <string name="export_csv">Export CSV</string>
-    <string name="connect_scanner">Connect Scanner</string>
-    <string name="disconnect_scanner">Disconnect</string>
-    <string name="scanner_service_notification">Scanner Active</string>
-    <string name="scanner_service_description">Listening for barcode scans</string>
-    <string name="notification_channel_name">Scanner Service</string>
-    <string name="notification_channel_description">Shows when scanner is running in background</string>
-    <string name="exported_successfully">CSV exported successfully</string>
-    <string name="export_failed">Failed to export CSV</string>
-    <string name="no_data_to_export">No scans to export</string>
-    <string name="select_device">Select Scanner Device</string>
-    <string name="no_paired_devices">No paired Bluetooth devices found</string>
-    <string name="bluetooth_not_available">Bluetooth not available</string>
-    <string name="permission_required">Bluetooth permission required</string>
+    
+    <!-- Spanish Localization -->
+    <string name="connection_status">Estado de Conexión:</string>
+    <string name="disconnected">Desconectado</string>
+    <string name="connected">Conectado</string>
+    <string name="connecting">Conectando…</string>
+    <string name="last_scanned">Último Código Escaneado:</string>
+    <string name="none">Ninguno</string>
+    <string name="export_csv">Exportar CSV</string>
+    <string name="connect_scanner">Conectar</string>
+    <string name="disconnect_scanner">Detener</string>
+    <string name="scanner_service_notification">Escáner Activo</string>
+    <string name="scanner_service_description">Escuchando escaneos de códigos de barras</string>
+    <string name="notification_channel_name">Servicio de Escáner</string>
+    <string name="notification_channel_description">Muestra cuando el escáner está funcionando en segundo plano</string>
+    <string name="exported_successfully">CSV exportado exitosamente</string>
+    <string name="export_failed">Error al exportar CSV</string>
+    <string name="no_data_to_export">No hay escaneos para exportar</string>
+    <string name="select_device">Seleccionar Dispositivo Escáner</string>
+    <string name="no_paired_devices">No se encontraron dispositivos Bluetooth emparejados</string>
+    <string name="bluetooth_not_available">Bluetooth no disponible</string>
+    <string name="permission_required">Permiso de Bluetooth requerido</string>
+    
+    <!-- Session Setup -->
+    <string name="session_setup_title">Configuración de Sesión</string>
+    <string name="session_setup_description">Configure el cliente y sector antes de comenzar</string>
+    <string name="cliente">Cliente</string>
+    <string name="cliente_example">Ejemplo: CocaCola</string>
+    <string name="sector">Sector</string>
+    <string name="sector_example">Ejemplo: Pasillo_A</string>
+    <string name="continuar">Continuar</string>
+    <string name="field_required">Campo requerido</string>
+    <string name="please_fill_all_fields">Por favor complete todos los campos</string>
+    <string name="session_configured">Sesión configurada correctamente</string>
+    
+    <!-- Overlay Messages -->
+    <string name="code_repeated">CÓDIGO REPETIDO: %1$s</string>
+    <string name="load_anyway">Cargar Igual</string>
+    <string name="discard">Descartar</string>
+    <string name="overlay_permission_required">Se requiere permiso para mostrar sobre otras apps</string>
+    <string name="open_settings">Abrir Configuración</string>
+    
+    <!-- Export Messages -->
+    <string name="saved_in_downloads">Guardado en Descargas: %1$s</string>
 </resources>
