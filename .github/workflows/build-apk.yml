@@ -125,8 +125,8 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             
-            # Add and commit the APK
-            git add release/DroneInventoryScanner-v${VERSION}-debug.apk
+            # Add and commit the APK (use -f to override .gitignore)
+            git add -f release/DroneInventoryScanner-v${VERSION}-debug.apk
             git commit -m "Add APK v${VERSION} to release folder [skip ci]"
             git push origin main
             
