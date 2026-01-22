@@ -58,7 +58,9 @@ class ScannerFlowTest {
     fun setup() {
         // Inject mock scanner factory
         mockScanner = MockScannerManager()
-        ScannerService.scannerManagerFactory = { mockScanner!! }
+        ScannerService.scannerManagerFactory = { 
+            mockScanner ?: throw IllegalStateException("Mock scanner not initialized") 
+        }
     }
 
     @After
