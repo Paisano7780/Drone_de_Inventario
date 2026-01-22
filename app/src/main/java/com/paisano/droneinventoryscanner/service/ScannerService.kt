@@ -135,7 +135,7 @@ class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInit
                 
                 if (device != null) {
                     currentDevice = device
-                    val connected = bluetoothManager.connect(device)
+                    val connected = bluetoothManager.connect(device, bluetoothAdapter)
                     
                     if (connected) {
                         reconnectAttempts = 0

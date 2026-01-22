@@ -52,9 +52,10 @@ class BluetoothSppManager {
     /**
      * Connect to a Bluetooth device
      * @param device The Bluetooth device to connect to
+     * @param adapter The Bluetooth adapter (needed to cancel discovery)
      * @return true if connection successful, false otherwise
      */
-    suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
+    suspend fun connect(device: BluetoothDevice, adapter: BluetoothAdapter? = null): Boolean = withContext(Dispatchers.IO) {
         try {
             // Implement smart retry with 3-second cooldown
             val timeSinceLastAttempt = System.currentTimeMillis() - lastConnectionAttempt
@@ -70,8 +71,16 @@ class BluetoothSppManager {
 
             Log.d(TAG, "Connecting to device: ${device.name} (${device.address})")
 
-            // Create socket
-            bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
+            // Cancel discovery to improve connection stability
+            try {
+                adapter?.cancelDiscovery()
+                Log.d(TAG, "Cancelled discovery before connecting")
+            } catch (e: SecurityException) {
+                Log.w(TAG, "Could not cancel discovery: ${e.message}")
+            }
+
+            // Create insecure socket (generic scanners don't support secure handshake)
+            bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
             
             // Connect with timeout to handle RF noise and interference
             val connectSuccess = try {
@@ -144,11 +153,14 @@ class BluetoothSppManager {
                     
                     // Check if we have a complete line (ends with CR or LF)
                     if (data.contains("\r") || data.contains("\n")) {
-                        val completeData = stringBuilder.toString()
+                        val completeData = stringBuilder.toString().trim()
                         stringBuilder.clear()
                         
-                        withContext(Dispatchers.Main) {
-                            listener?.onDataReceived(completeData)
+                        // Only send non-empty data after trimming
+                        if (completeData.isNotEmpty()) {
+                            withContext(Dispatchers.Main) {
+                                listener?.onDataReceived(completeData)
+                            }
                         }
                     }
                 }
