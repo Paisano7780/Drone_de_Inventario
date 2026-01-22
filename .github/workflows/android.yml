@@ -47,7 +47,7 @@ jobs:
       
       - name: Build Debug APK with dynamic version
         run: |
-          ./gradlew assembleDebug -PVERSION_NAME=${{ steps.get_version.outputs.version }} --no-daemon --stacktrace
+          ./gradlew assembleDebug -PVERSION_NAME='${{ steps.get_version.outputs.version }}' --no-daemon --stacktrace
         env:
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
       
@@ -128,7 +128,7 @@ jobs:
             - **Version Code:** ${{ github.run_number }}
             - **APK Size:** ${{ steps.rename_apk.outputs.apk_size }}
             - **Commit:** ${{ github.sha }}
-            - **Built:** ${{ github.event.head_commit.timestamp }}
+            - **Built:** ${{ github.event.repository.pushed_at }}
           files: ${{ steps.rename_apk.outputs.apk_path }}
           draft: false
           prerelease: false
