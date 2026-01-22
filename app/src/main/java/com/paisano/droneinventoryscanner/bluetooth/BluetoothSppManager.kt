@@ -5,9 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
@@ -97,7 +95,7 @@ class BluetoothSppManager {
         } else {
             disconnect() // Cleanup
             withContext(Dispatchers.Main) {
-                listener?.onError("No se pudo conectar (Error de Protocolo)")
+                listener?.onError("Connection failed (Protocol Error)")
             }
             return@withContext false
         }
