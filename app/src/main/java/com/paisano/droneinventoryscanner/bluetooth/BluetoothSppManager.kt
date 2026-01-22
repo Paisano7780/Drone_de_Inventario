@@ -52,7 +52,7 @@ class BluetoothSppManager {
     /**
      * Connect to a Bluetooth device
      * @param device The Bluetooth device to connect to
-     * @param adapter The Bluetooth adapter (needed to cancel discovery)
+     * @param adapter The Bluetooth adapter (optional, needed to cancel discovery for improved stability)
      * @return true if connection successful, false otherwise
      */
     suspend fun connect(device: BluetoothDevice, adapter: BluetoothAdapter? = null): Boolean = withContext(Dispatchers.IO) {
@@ -73,8 +73,10 @@ class BluetoothSppManager {
 
             // Cancel discovery to improve connection stability
             try {
-                adapter?.cancelDiscovery()
-                Log.d(TAG, "Cancelled discovery before connecting")
+                if (adapter != null) {
+                    adapter.cancelDiscovery()
+                    Log.d(TAG, "Cancelled discovery before connecting")
+                }
             } catch (e: SecurityException) {
                 Log.w(TAG, "Could not cancel discovery: ${e.message}")
             }
