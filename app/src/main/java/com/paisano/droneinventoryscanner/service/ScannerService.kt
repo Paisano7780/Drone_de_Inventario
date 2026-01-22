@@ -21,6 +21,7 @@ import com.paisano.droneinventoryscanner.bluetooth.BluetoothSppManager
 import com.paisano.droneinventoryscanner.bluetooth.IScannerManager
 import com.paisano.droneinventoryscanner.data.parser.DataParser
 import com.paisano.droneinventoryscanner.data.repository.ScanRepository
+import com.paisano.droneinventoryscanner.overlay.OverlayService
 import com.paisano.droneinventoryscanner.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -85,6 +86,19 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         
         // Set up Bluetooth manager
         bluetoothManager.setConnectionListener(this)
+        
+        // Set up overlay callback
+        OverlayService.duplicateDecisionCallback = object : OverlayService.DuplicateDecisionCallback {
+            override fun onLoadAnyway(code: String) {
+                scanRepository.forceAddScan(code)
+                speak("Correcto")
+                listener?.onScanReceived(code, false)
+            }
+            
+            override fun onDiscard(code: String) {
+                speak("Descartado")
+            }
+        }
         
         createNotificationChannel()
     }
@@ -202,6 +216,8 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         
+        OverlayService.duplicateDecisionCallback = null
+        
         reconnectJob?.cancel()
     }
 
@@ -233,22 +249,26 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         val cleanedCode = dataParser.parseRawInput(data)
         
         if (cleanedCode != null && dataParser.isValidCode(cleanedCode)) {
-            val isDuplicate = scanRepository.isDuplicate(cleanedCode)
-            
-            if (isDuplicate) {
-                speak("Duplicate")
-            } else {
-                scanRepository.addScan(cleanedCode)
-                // Speak last 3 digits
-                val last3 = if (cleanedCode.length >= 3) {
-                    cleanedCode.takeLast(3)
-                } else {
-                    cleanedCode
+            // Check duplicate status with jitter filter
+            when (scanRepository.checkDuplicateWithJitter(cleanedCode)) {
+                ScanRepository.DuplicateStatus.NEW -> {
+                    // New code, add it
+                    scanRepository.addScan(cleanedCode)
+                    speak("Correcto")
+                    OverlayService.showSuccess(this)
+                    listener?.onScanReceived(cleanedCode, false)
                 }
-                speak(last3)
+                ScanRepository.DuplicateStatus.JITTER -> {
+                    // Ignore silently (hand jitter within 2 seconds)
+                    Log.d(TAG, "Jitter detected, ignoring scan")
+                }
+                ScanRepository.DuplicateStatus.DUPLICATE_DECISION_NEEDED -> {
+                    // Show overlay for user decision
+                    speak("Atención, Duplicado")
+                    OverlayService.showDuplicateDecision(this, cleanedCode)
+                    listener?.onScanReceived(cleanedCode, true)
+                }
             }
-            
-            listener?.onScanReceived(cleanedCode, isDuplicate)
         }
     }
 
