@@ -1,0 +1,149 @@
+name: Android Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger only on version tags (e.g., v1.0, v2.3.1)
+
+jobs:
+  build-release:
+    name: Build and Release Android APK
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for creating releases
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Extract version from tag
+        id: get_version
+        run: |
+          # Get the tag name (e.g., v1.0, v2.3.1)
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          
+          # Remove 'v' prefix to get clean version number
+          VERSION=${TAG_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          
+          echo "### 📦 Building Version: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "**Git Tag:** $TAG_NAME" >> $GITHUB_STEP_SUMMARY
+        
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      
+      - name: Build Debug APK with dynamic version
+        run: |
+          ./gradlew assembleDebug -PVERSION_NAME=${{ steps.get_version.outputs.version }} --no-daemon --stacktrace
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      
+      - name: Verify APK was created
+        run: |
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ ERROR: APK not found at $APK_PATH"
+            exit 1
+          fi
+          echo "✅ APK found: $APK_PATH"
+          ls -lh "$APK_PATH"
+      
+      - name: Rename APK with version
+        id: rename_apk
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          OLD_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          NEW_NAME="DroneInventoryScanner-${VERSION}.apk"
+          NEW_PATH="app/build/outputs/apk/debug/${NEW_NAME}"
+          
+          # Copy and rename the APK
+          cp "$OLD_PATH" "$NEW_PATH"
+          
+          # Get APK size
+          APK_SIZE=$(du -h "$NEW_PATH" | cut -f1)
+          
+          echo "apk_path=$NEW_PATH" >> $GITHUB_OUTPUT
+          echo "apk_name=$NEW_NAME" >> $GITHUB_OUTPUT
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+          
+          echo "✅ APK renamed to: $NEW_NAME ($APK_SIZE)" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DroneInventoryScanner-${{ steps.get_version.outputs.version }}
+          path: ${{ steps.rename_apk.outputs.apk_path }}
+          retention-days: 90
+          if-no-files-found: error
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.tag_name }}
+          name: DroneInventoryScanner ${{ steps.get_version.outputs.version }}
+          body: |
+            ## DroneInventoryScanner ${{ steps.get_version.outputs.version }}
+            
+            **Automatic release** created from git tag `${{ steps.get_version.outputs.tag_name }}`.
+            
+            ### Features
+            - ✅ Bluetooth SPP connection to ring scanners
+            - ✅ Foreground service for background operation
+            - ✅ Auto-reconnection (5 attempts)
+            - ✅ Text-to-Speech audio feedback
+            - ✅ Duplicate detection
+            - ✅ CSV export to Documents/DroneScans
+            - ✅ Dark mode UI
+            
+            ### Installation
+            1. Download the APK below
+            2. Enable "Install from unknown sources" on your Android device
+            3. Install the APK
+            4. Grant Bluetooth and notification permissions
+            
+            ### Usage
+            1. Pair your Bluetooth scanner in Android settings
+            2. Open the app and tap "Connect Scanner"
+            3. Select your scanner from the list
+            4. Start scanning barcodes
+            
+            **Tested on:** Xiaomi Redmi Note 13 Pro
+            **Compatible with:** Generic Eyoyo/Ring Scanners (SPP mode)
+            
+            ### Build Info
+            - **Version:** ${{ steps.get_version.outputs.version }}
+            - **Version Code:** ${{ github.run_number }}
+            - **APK Size:** ${{ steps.rename_apk.outputs.apk_size }}
+            - **Commit:** ${{ github.sha }}
+            - **Built:** ${{ github.event.head_commit.timestamp }}
+          files: ${{ steps.rename_apk.outputs.apk_path }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "### ✅ Release Build Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Name:** ${{ steps.rename_apk.outputs.apk_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**APK Size:** ${{ steps.rename_apk.outputs.apk_size }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📦 **Release:** [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ steps.get_version.outputs.tag_name }})" >> $GITHUB_STEP_SUMMARY
+          echo "📥 **Artifact:** Available in the Artifacts section above" >> $GITHUB_STEP_SUMMARY
