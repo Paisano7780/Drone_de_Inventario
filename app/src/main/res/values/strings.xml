@@ -40,7 +40,10 @@
     <string name="code_repeated">CÓDIGO REPETIDO: %1$s</string>
     <string name="load_anyway">Cargar Igual</string>
     <string name="discard">Descartar</string>
+    <string name="yes_load_anyway">SI\nCargar Igual</string>
+    <string name="no_discard">NO\nDescartar</string>
     <string name="overlay_permission_required">Se requiere permiso para mostrar sobre otras apps</string>
+    <string name="overlay_permission_title">Permiso Requerido</string>
     <string name="open_settings">Abrir Configuración</string>
     
     <!-- Export Messages -->

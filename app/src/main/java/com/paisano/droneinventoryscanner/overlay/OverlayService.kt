@@ -98,7 +98,8 @@ class OverlayService : Service() {
                 val params = createOverlayParams(
                     width = WindowManager.LayoutParams.WRAP_CONTENT,
                     height = WindowManager.LayoutParams.WRAP_CONTENT,
-                    gravity = Gravity.TOP or Gravity.END
+                    gravity = Gravity.TOP or Gravity.END,
+                    focusable = false // Display-only, no interaction needed
                 )
                 
                 params.x = 20
@@ -145,7 +146,8 @@ class OverlayService : Service() {
                 val params = createOverlayParams(
                     width = WindowManager.LayoutParams.MATCH_PARENT,
                     height = WindowManager.LayoutParams.WRAP_CONTENT,
-                    gravity = Gravity.CENTER
+                    gravity = Gravity.CENTER,
+                    focusable = true // Needs to be focusable for button interaction
                 )
                 
                 params.width = (resources.displayMetrics.widthPixels * 0.9).toInt()
@@ -161,7 +163,8 @@ class OverlayService : Service() {
     private fun createOverlayParams(
         width: Int,
         height: Int,
-        gravity: Int
+        gravity: Int,
+        focusable: Boolean = false
     ): WindowManager.LayoutParams {
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -170,13 +173,23 @@ class OverlayService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
         
+        // Use appropriate flags based on whether interaction is needed
+        val flags = if (focusable) {
+            // Focusable for interactive overlays (buttons)
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        } else {
+            // Non-focusable for display-only overlays
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+        }
+        
         return WindowManager.LayoutParams(
             width,
             height,
             layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-            WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
+            flags,
             PixelFormat.TRANSLUCENT
         ).apply {
             this.gravity = gravity

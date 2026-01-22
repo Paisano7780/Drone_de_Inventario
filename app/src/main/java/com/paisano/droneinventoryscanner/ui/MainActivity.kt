@@ -170,7 +170,7 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
     private fun checkOverlayPermission() {
         if (!OverlayService.canDrawOverlays(this)) {
             AlertDialog.Builder(this)
-                .setTitle("Permiso Requerido")
+                .setTitle(R.string.overlay_permission_title)
                 .setMessage(R.string.overlay_permission_required)
                 .setPositiveButton(R.string.open_settings) { _, _ ->
                     openOverlaySettings()

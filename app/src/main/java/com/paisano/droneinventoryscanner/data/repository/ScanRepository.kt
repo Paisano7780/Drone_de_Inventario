@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import android.util.Log
 import com.paisano.droneinventoryscanner.data.model.ScanRecord
 import java.io.File
 import java.io.FileWriter
@@ -88,13 +89,14 @@ class ScanRepository(private val context: Context? = null) {
     
     /**
      * Force add a scan even if it's a duplicate
+     * Note: This adds to scanSet to maintain consistent duplicate detection
      */
     @Synchronized
     fun forceAddScan(code: String): Boolean {
         val timestamp = System.currentTimeMillis()
         val record = ScanRecord(timestamp, code)
         scans.add(record)
-        // Note: We don't add to scanSet, allowing future duplicates to be detected
+        scanSet.add(code) // Add to scanSet to ensure consistent duplicate detection
         lastScannedCode = code
         lastScannedTime = timestamp
         return true
@@ -142,14 +144,14 @@ class ScanRepository(private val context: Context? = null) {
      */
     fun exportToCsvInDownloads(filenamePrefix: String): Pair<Boolean, String?> {
         return try {
+            if (context == null) {
+                Log.e("ScanRepository", "Context is null - cannot export to Downloads folder")
+                return Pair(false, null)
+            }
+            
             val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
             val timestamp = dateFormat.format(Date())
             val filename = "${filenamePrefix}_${timestamp}.csv"
-            
-            if (context == null) {
-                // Fallback for testing
-                return Pair(false, null)
-            }
             
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 // Use MediaStore for Android 10+
