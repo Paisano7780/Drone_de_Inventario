@@ -153,13 +153,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # Delete local tag if it exists
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
+          if git tag -l "$TAG" | grep -q "^${TAG}$"; then
             echo "Local tag $TAG exists, deleting it"
             git tag -d "$TAG"
           fi
           
           # Delete remote tag if it exists
-          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
             echo "Remote tag $TAG exists, deleting it"
             git push origin :refs/tags/$TAG
           fi
