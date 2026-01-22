@@ -18,6 +18,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.paisano.droneinventoryscanner.R
 import com.paisano.droneinventoryscanner.bluetooth.BluetoothSppManager
+import com.paisano.droneinventoryscanner.bluetooth.IScannerManager
 import com.paisano.droneinventoryscanner.data.parser.DataParser
 import com.paisano.droneinventoryscanner.data.repository.ScanRepository
 import com.paisano.droneinventoryscanner.ui.MainActivity
@@ -32,7 +33,7 @@ import java.util.Locale
  * ScannerService - Foreground service for Bluetooth scanner
  * Runs in background and maintains connection to scanner
  */
-class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInitListener {
+class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitListener {
 
     companion object {
         private const val TAG = "ScannerService"
@@ -43,6 +44,9 @@ class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInit
         const val EXTRA_DEVICE_ADDRESS = "device_address"
         private const val RECONNECT_DELAY_MS = 3000L // 3-second delay as per requirements
         private const val MAX_RECONNECT_ATTEMPTS = 5
+        
+        // For dependency injection during testing
+        var scannerManagerFactory: (() -> IScannerManager)? = null
     }
 
     interface ServiceListener {
@@ -53,7 +57,9 @@ class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInit
     private val binder = LocalBinder()
     private var listener: ServiceListener? = null
     
-    private val bluetoothManager by lazy { BluetoothSppManager() }
+    private val bluetoothManager: IScannerManager by lazy {
+        scannerManagerFactory?.invoke() ?: BluetoothSppManager()
+    }
     private val scanRepository by lazy { ScanRepository() }
     private val dataParser by lazy { DataParser() }
     
@@ -109,6 +115,8 @@ class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInit
     }
 
     fun getRepository(): ScanRepository = scanRepository
+    
+    fun getScannerManager(): IScannerManager = bluetoothManager
 
     fun connectToScanner(device: BluetoothDevice) {
         currentDevice = device
