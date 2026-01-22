@@ -69,13 +69,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
         
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
-        id: build_apk
-      
       - name: Get version info
         id: version
-        if: success()
         run: |
           # Get the latest tag or default to v1.0
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.9")
@@ -97,6 +92,12 @@ jobs:
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "tag=v${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "**Version:** ${NEW_VERSION}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug -PVERSION_NAME=${{ steps.version.outputs.version }} --no-daemon --stacktrace
+        id: build_apk
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         
       - name: Rename APK with version
         if: success()
