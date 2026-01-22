@@ -9,10 +9,18 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 ✅ El workflow se ejecutará **automáticamente**
 ✅ Los tests unitarios se ejecutarán primero
 ✅ Se compilará el APK
+✅ El APK se **guardará automáticamente** en la carpeta `release/` del repositorio
 ✅ Se creará un **Release automático** con número de versión (ej: `v1.0`)
-✅ El APK estará disponible en la sección **Releases**
+✅ El APK estará disponible en **tres lugares**: carpeta `release/`, sección **Releases**, y **Artifacts**
 
 **Para descargar el APK después del merge:**
+
+**Opción más fácil - Carpeta release/:**
+1. Ve a la carpeta `release/` en el repositorio
+2. Descarga directamente `DroneInventoryScanner-v1.0-debug.apk`
+3. ¡Listo! Ya tienes tu APK
+
+**Opción alternativa - Releases:**
 1. Ve a la pestaña **Releases** (lado derecho de la página principal)
 2. Haz clic en el release más reciente (ej: `v1.0`)
 3. Descarga `DroneInventoryScanner-v1.0-debug.apk`
@@ -21,7 +29,27 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 - Primera versión: `v1.0`
 - Versiones siguientes: Se incrementa automáticamente (`v1.1`, `v1.2`, etc.)
 
-## 🚀 Opción 1: Descargar APK desde Releases (Después del Merge)
+## 📁 Opción 1: Descargar APK desde la Carpeta Release ⭐ MÁS FÁCIL
+
+**La forma más rápida y directa:**
+
+### Paso 1: Ir a la carpeta release/
+1. Abre el repositorio en GitHub
+2. Haz clic en la carpeta **release/** en la página principal
+3. Verás los APKs compilados allí
+
+### Paso 2: Descargar el APK
+4. Haz clic en el APK más reciente (ej: `DroneInventoryScanner-v1.0-debug.apk`)
+5. Haz clic en el botón **Download** (Descargar)
+6. ¡El APK se descargará directamente a tu computadora!
+
+**Ventajas:**
+- ✅ Acceso directo sin pasos adicionales
+- ✅ No necesitas navegar por Actions o Releases
+- ✅ El APK está versionado y listo para usar
+- ✅ Actualizado automáticamente con cada merge a main
+
+## 🚀 Opción 2: Descargar APK desde Releases
 
 ### Paso 1: Ir a Releases
 1. Abre el repositorio en GitHub
@@ -33,7 +61,7 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 5. En la sección **Assets**, haz clic en `DroneInventoryScanner-v1.0-debug.apk`
 6. ¡El APK se descargará directamente!
 
-## 📦 Opción 2: Descargar APK desde Artifacts
+## 📦 Opción 3: Descargar APK desde Artifacts
 
 ### Paso 1: Ir a la pestaña Actions
 1. Abre el repositorio en GitHub
@@ -51,7 +79,7 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 9. Descomprime el archivo ZIP
 10. ¡Ya tienes tu APK!
 
-## 🔄 Opción 3: Ejecutar un Nuevo Build Manualmente
+## 🔄 Opción 4: Ejecutar un Nuevo Build Manualmente
 
 ### Si quieres compilar una nueva versión manualmente:
 
@@ -60,9 +88,9 @@ Esta guía explica cómo obtener el APK compilado usando los workflows automatiz
 3. Selecciona la rama
 4. Haz clic en **Run workflow**
 5. Espera 3-5 minutos mientras se compila
-6. Descarga desde Artifacts o Releases
+6. Descarga desde la carpeta release/, Artifacts o Releases
 
-## 🎁 Opción 4: Crear un Release con Versión Personalizada
+## 🎁 Opción 5: Crear un Release con Versión Personalizada
 
 ### Para crear una versión con número específico:
 
