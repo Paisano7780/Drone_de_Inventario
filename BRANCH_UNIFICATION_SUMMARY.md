@@ -111,7 +111,7 @@ Si se desea mantener las ramas por referencia histórica, se pueden actualizar:
 git checkout copilot/create-drone-inventory-scanner
 git merge main
 
-# Actualizar copilot/fix-apk-not-in-release-folder  
+# Actualizar copilot/fix-apk-not-in-release-folder
 git checkout copilot/fix-apk-not-in-release-folder
 git merge main
 ```
