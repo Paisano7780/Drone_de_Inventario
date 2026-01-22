@@ -5,9 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 import java.io.InputStream
 import java.util.UUID
@@ -56,79 +54,50 @@ class BluetoothSppManager {
      * @return true if connection successful, false otherwise
      */
     suspend fun connect(device: BluetoothDevice, adapter: BluetoothAdapter? = null): Boolean = withContext(Dispatchers.IO) {
+        // 1. Cancel Discovery (Crucial for bandwidth)
         try {
-            // Implement smart retry with 3-second cooldown
-            val timeSinceLastAttempt = System.currentTimeMillis() - lastConnectionAttempt
-            if (timeSinceLastAttempt < RETRY_COOLDOWN_MS) {
-                val remainingCooldown = RETRY_COOLDOWN_MS - timeSinceLastAttempt
-                Log.d(TAG, "Cooldown period: waiting ${remainingCooldown}ms before retry")
-                delay(remainingCooldown)
-            }
-            lastConnectionAttempt = System.currentTimeMillis()
+            adapter?.cancelDiscovery()
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Could not cancel discovery: ${e.message}")
+        }
 
-            // Close existing connection if any
-            disconnect()
+        // 2. Clear old connection
+        disconnect()
 
-            Log.d(TAG, "Connecting to device: ${device.name} (${device.address})")
-
-            // Cancel discovery to improve connection stability
-            try {
-                if (adapter != null) {
-                    adapter.cancelDiscovery()
-                    Log.d(TAG, "Cancelled discovery before connecting")
-                }
-            } catch (e: SecurityException) {
-                Log.w(TAG, "Could not cancel discovery: ${e.message}")
-            }
-
-            // Create insecure socket (generic scanners don't support secure handshake)
+        var success = false
+        try {
+            Log.d(TAG, "Attempting Standard Insecure Connection...")
             bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
-            
-            // Connect with timeout to handle RF noise and interference
-            val connectSuccess = try {
-                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
-                    bluetoothSocket?.connect()
-                    true
-                } ?: false
-            } catch (e: IOException) {
-                // Connection failed within timeout period
-                Log.e(TAG, "Connection failed during timeout: ${e.message}", e)
-                false
+            bluetoothSocket?.connect()
+            success = true
+        } catch (e: IOException) {
+            Log.w(TAG, "Standard connection failed: ${e.message}. Trying Reflection (Port 1)...")
+            try {
+                // FALLBACK: Port 1 Reflection Method
+                val m = device.javaClass.getMethod("createInsecureRfcommSocket", Int::class.javaPrimitiveType)
+                bluetoothSocket = m.invoke(device, 1) as BluetoothSocket
+                bluetoothSocket?.connect()
+                success = true
+                Log.d(TAG, "Connected via Reflection (Port 1)!")
+            } catch (e2: Exception) {
+                Log.e(TAG, "Reflection connection also failed: ${e2.message}")
+                success = false
             }
-            
-            if (!connectSuccess) {
-                Log.e(TAG, "Connection failed or timeout after ${CONNECTION_TIMEOUT_MS}ms")
-                disconnect()
-                withContext(Dispatchers.Main) {
-                    listener?.onError("Connection timeout")
-                }
-                return@withContext false
-            }
-            
-            // Get input stream
+        }
+
+        if (success) {
             inputStream = bluetoothSocket?.inputStream
-            
             isConnected = true
-            
             withContext(Dispatchers.Main) {
                 listener?.onConnected()
             }
-            
-            Log.d(TAG, "Connected successfully")
-            true
-        } catch (e: IOException) {
-            Log.e(TAG, "Connection failed: ${e.message}", e)
-            disconnect()
+            return@withContext true
+        } else {
+            disconnect() // Cleanup
             withContext(Dispatchers.Main) {
-                listener?.onError("Connection failed: ${e.message}")
+                listener?.onError("Connection failed (Protocol Error)")
             }
-            false
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Security exception: ${e.message}", e)
-            withContext(Dispatchers.Main) {
-                listener?.onError("Bluetooth permission denied")
-            }
-            false
+            return@withContext false
         }
     }
 
