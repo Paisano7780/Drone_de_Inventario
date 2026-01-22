@@ -41,7 +41,7 @@ class ScannerService : Service(), BluetoothSppManager.ConnectionListener, OnInit
         const val ACTION_START = "com.paisano.droneinventoryscanner.START"
         const val ACTION_STOP = "com.paisano.droneinventoryscanner.STOP"
         const val EXTRA_DEVICE_ADDRESS = "device_address"
-        private const val RECONNECT_DELAY_MS = 5000L
+        private const val RECONNECT_DELAY_MS = 3000L // 3-second delay as per requirements
         private const val MAX_RECONNECT_ATTEMPTS = 5
     }
 
