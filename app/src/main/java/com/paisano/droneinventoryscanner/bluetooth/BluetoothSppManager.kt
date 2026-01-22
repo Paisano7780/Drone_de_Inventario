@@ -74,13 +74,19 @@ class BluetoothSppManager {
             bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
             
             // Connect with timeout to handle RF noise and interference
-            val connectSuccess = withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
-                bluetoothSocket?.connect()
-                true
-            } ?: false
+            val connectSuccess = try {
+                withTimeoutOrNull(CONNECTION_TIMEOUT_MS) {
+                    bluetoothSocket?.connect()
+                    true
+                } ?: false
+            } catch (e: IOException) {
+                // Connection failed within timeout period
+                Log.e(TAG, "Connection failed during timeout: ${e.message}", e)
+                false
+            }
             
             if (!connectSuccess) {
-                Log.e(TAG, "Connection timeout after ${CONNECTION_TIMEOUT_MS}ms")
+                Log.e(TAG, "Connection failed or timeout after ${CONNECTION_TIMEOUT_MS}ms")
                 disconnect()
                 withContext(Dispatchers.Main) {
                     listener?.onError("Connection timeout")
@@ -193,8 +199,13 @@ class BluetoothSppManager {
             
             Log.d(TAG, "Disconnected and cleaned up resources")
             listener?.onDisconnected()
-        } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error during disconnect: ${e.message}", e)
+        } catch (e: IOException) {
+            Log.e(TAG, "IO error during disconnect: ${e.message}", e)
+            // Ensure resources are cleared even if error occurs
+            inputStream = null
+            bluetoothSocket = null
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security error during disconnect: ${e.message}", e)
             // Ensure resources are cleared even if error occurs
             inputStream = null
             bluetoothSocket = null
