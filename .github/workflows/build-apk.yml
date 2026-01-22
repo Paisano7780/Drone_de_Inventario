@@ -69,14 +69,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
         
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
-        continue-on-error: true
-        id: build_apk
-      
       - name: Get version info
         id: version
-        if: steps.build_apk.outcome == 'success'
         run: |
           # Get the latest tag or default to v1.0
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.9")
@@ -98,9 +92,15 @@ jobs:
           echo "version=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "tag=v${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "**Version:** ${NEW_VERSION}" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug -PVERSION_NAME='${{ steps.version.outputs.version }}' --no-daemon --stacktrace
+        id: build_apk
+        env:
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
         
       - name: Rename APK with version
-        if: steps.build_apk.outcome == 'success'
+        if: success()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           if [ -f app/build/outputs/apk/debug/app-debug.apk ]; then
@@ -109,7 +109,7 @@ jobs:
           fi
       
       - name: Commit APK to release folder (main branch only)
-        if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
+        if: github.ref == 'refs/heads/main' && success()
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           
@@ -136,7 +136,7 @@ jobs:
           fi
         
       - name: Upload Debug APK
-        if: steps.build_apk.outcome == 'success'
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug-v${{ steps.version.outputs.version }}
@@ -146,7 +146,7 @@ jobs:
           retention-days: 30
           
       - name: Create Git Tag
-        if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
+        if: github.ref == 'refs/heads/main' && success()
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           git config user.name "github-actions[bot]"
@@ -170,7 +170,7 @@ jobs:
           echo "✅ Created and pushed tag: $TAG" >> $GITHUB_STEP_SUMMARY
       
       - name: Create Release (main branch only)
-        if: github.ref == 'refs/heads/main' && steps.build_apk.outcome == 'success'
+        if: github.ref == 'refs/heads/main' && success()
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
@@ -219,7 +219,7 @@ jobs:
       - name: Build Summary
         if: always()
         run: |
-          if [ "${{ steps.build_apk.outcome }}" == "success" ]; then
+          if [ "${{ job.status }}" == "success" ]; then
             echo "### ✅ APK Build Successful" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
@@ -238,14 +238,15 @@ jobs:
           else
             echo "### ❌ APK Build Failed" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "The Android APK build requires:" >> $GITHUB_STEP_SUMMARY
-            echo "- Android SDK" >> $GITHUB_STEP_SUMMARY
-            echo "- Network access to dl.google.com (Google Maven)" >> $GITHUB_STEP_SUMMARY
+            echo "The Android APK build failed. Check the logs above for details." >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Alternative:** Build locally with Android Studio" >> $GITHUB_STEP_SUMMARY
+            echo "**Common issues:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Missing dependencies" >> $GITHUB_STEP_SUMMARY
+            echo "- Compilation errors" >> $GITHUB_STEP_SUMMARY
+            echo "- SDK version mismatches" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**To build locally:**" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
             echo "./gradlew assembleDebug" >> $GITHUB_STEP_SUMMARY
             echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**✅ Unit tests passed:** The code is tested and working" >> $GITHUB_STEP_SUMMARY
           fi

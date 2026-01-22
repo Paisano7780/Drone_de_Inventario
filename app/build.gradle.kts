@@ -5,14 +5,23 @@ plugins {
 
 android {
     namespace = "com.paisano.droneinventoryscanner"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.paisano.droneinventoryscanner"
         minSdk = 26
-        targetSdk = 33
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 34
+        
+        // Dynamic version code from GitHub Actions run number or timestamp
+        versionCode = if (System.getenv("GITHUB_RUN_NUMBER") != null) {
+            System.getenv("GITHUB_RUN_NUMBER").toInt()
+        } else {
+            // Use timestamp modulo to prevent integer overflow (valid until 2038+)
+            ((System.currentTimeMillis() / 1000) % Int.MAX_VALUE).toInt()
+        }
+        
+        // Dynamic version name from project property or default to DEV-SNAPSHOT
+        versionName = project.findProperty("VERSION_NAME")?.toString() ?: "DEV-SNAPSHOT"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
