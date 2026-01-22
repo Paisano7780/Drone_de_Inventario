@@ -4,7 +4,6 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
-import android.media.MediaPlayer
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -67,21 +66,10 @@ class OverlayService : Service() {
     private var successOverlayView: View? = null
     private var duplicateOverlayView: View? = null
     private val handler = Handler(Looper.getMainLooper())
-    
-    private var successMediaPlayer: MediaPlayer? = null
-    private var errorMediaPlayer: MediaPlayer? = null
 
     override fun onCreate() {
         super.onCreate()
         windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        
-        // Initialize sound players (using system sounds)
-        try {
-            successMediaPlayer = MediaPlayer.create(this, android.R.raw.default_sound)
-            errorMediaPlayer = MediaPlayer.create(this, android.R.raw.default_sound)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize sound players", e)
-        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -118,9 +106,6 @@ class OverlayService : Service() {
 
                 windowManager?.addView(successOverlayView, params)
                 
-                // Play success sound
-                playSuccessSound()
-                
                 // Fade out after 2 seconds
                 handler.postDelayed({
                     fadeOutAndRemove(successOverlayView) {
@@ -149,13 +134,11 @@ class OverlayService : Service() {
                 // Set up button listeners
                 binding.btnLoadAnyway.setOnClickListener {
                     duplicateDecisionCallback?.onLoadAnyway(code)
-                    playSuccessSound()
                     hideDuplicateOverlay()
                 }
                 
                 binding.btnDiscard.setOnClickListener {
                     duplicateDecisionCallback?.onDiscard(code)
-                    playErrorSound()
                     hideDuplicateOverlay()
                 }
 
@@ -168,9 +151,6 @@ class OverlayService : Service() {
                 params.width = (resources.displayMetrics.widthPixels * 0.9).toInt()
 
                 windowManager?.addView(duplicateOverlayView, params)
-                
-                // Play attention sound
-                playErrorSound()
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error showing duplicate decision overlay", e)
@@ -245,30 +225,9 @@ class OverlayService : Service() {
         hideSuccessOverlay()
         hideDuplicateOverlay()
     }
-    
-    private fun playSuccessSound() {
-        try {
-            successMediaPlayer?.start()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing success sound", e)
-        }
-    }
-    
-    private fun playErrorSound() {
-        try {
-            errorMediaPlayer?.start()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing error sound", e)
-        }
-    }
 
     override fun onDestroy() {
         super.onDestroy()
         hideAllOverlays()
-        
-        successMediaPlayer?.release()
-        errorMediaPlayer?.release()
-        successMediaPlayer = null
-        errorMediaPlayer = null
     }
 }
