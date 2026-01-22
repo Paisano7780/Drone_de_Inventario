@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import java.io.InputStream
@@ -14,7 +15,7 @@ import java.util.UUID
  * BluetoothSppManager - Manages Bluetooth SPP (Serial Port Profile) connection
  * Connects to a Bluetooth device and reads data from it
  */
-class BluetoothSppManager {
+class BluetoothSppManager : IScannerManager {
 
     companion object {
         private const val TAG = "BluetoothSppManager"
@@ -26,24 +27,18 @@ class BluetoothSppManager {
         private const val RETRY_COOLDOWN_MS = 3000L // 3 seconds
     }
 
-    interface ConnectionListener {
-        fun onConnected()
-        fun onDisconnected()
-        fun onDataReceived(data: String)
-        fun onError(error: String)
-    }
-
     private var bluetoothSocket: BluetoothSocket? = null
     private var inputStream: InputStream? = null
-    private var isConnected = false
-    private var listener: ConnectionListener? = null
-    private var isReading = false
+    @Volatile private var isConnected = false
+    private var listener: IScannerManager.ConnectionListener? = null
+    @Volatile private var isReading = false
     private var lastConnectionAttempt = 0L
+    private var isDisconnecting = false
 
     /**
      * Set the connection listener
      */
-    fun setConnectionListener(listener: ConnectionListener) {
+    override fun setConnectionListener(listener: IScannerManager.ConnectionListener) {
         this.listener = listener
     }
 
@@ -53,10 +48,38 @@ class BluetoothSppManager {
      * @param adapter The Bluetooth adapter (optional, needed to cancel discovery for improved stability)
      * @return true if connection successful, false otherwise
      */
-    suspend fun connect(device: BluetoothDevice, adapter: BluetoothAdapter? = null): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun connect(device: BluetoothDevice?, adapter: BluetoothAdapter?): Boolean = withContext(Dispatchers.IO) {
+        if (device == null) {
+            Log.e(TAG, "Device is null")
+            withContext(Dispatchers.Main) {
+                listener?.onError("Device is null")
+            }
+            return@withContext false
+        }
+        
+        // Validate adapter is enabled
+        if (adapter != null && !adapter.isEnabled) {
+            Log.e(TAG, "Bluetooth adapter is not enabled")
+            withContext(Dispatchers.Main) {
+                listener?.onError("Bluetooth is not enabled")
+            }
+            return@withContext false
+        }
+
+        // Check cooldown period to prevent rapid reconnection attempts
+        val now = System.currentTimeMillis()
+        if (now - lastConnectionAttempt < RETRY_COOLDOWN_MS) {
+            val waitTime = RETRY_COOLDOWN_MS - (now - lastConnectionAttempt)
+            Log.d(TAG, "Connection cooldown active, waiting ${waitTime}ms")
+            delay(waitTime)
+        }
+        lastConnectionAttempt = System.currentTimeMillis()
+
         // 1. Cancel Discovery (Crucial for bandwidth)
         try {
             adapter?.cancelDiscovery()
+            // Give the adapter time to fully cancel discovery
+            delay(300)
         } catch (e: SecurityException) {
             Log.w(TAG, "Could not cancel discovery: ${e.message}")
         }
@@ -65,32 +88,61 @@ class BluetoothSppManager {
         disconnect()
 
         var success = false
+        var socketToUse: BluetoothSocket? = null
+        
         try {
             Log.d(TAG, "Attempting Standard Insecure Connection...")
-            bluetoothSocket = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
-            bluetoothSocket?.connect()
+            socketToUse = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
+            socketToUse?.connect()
             success = true
         } catch (e: IOException) {
             Log.w(TAG, "Standard connection failed: ${e.message}. Trying Reflection (Port 1)...")
+            // Close failed socket
+            try {
+                socketToUse?.close()
+            } catch (e2: IOException) {
+                Log.w(TAG, "Error closing failed socket: ${e2.message}")
+            }
+            socketToUse = null
+            
             try {
                 // FALLBACK: Port 1 Reflection Method
                 val m = device.javaClass.getMethod("createInsecureRfcommSocket", Int::class.javaPrimitiveType)
-                bluetoothSocket = m.invoke(device, 1) as BluetoothSocket
-                bluetoothSocket?.connect()
+                socketToUse = m.invoke(device, 1) as BluetoothSocket
+                socketToUse?.connect()
                 success = true
                 Log.d(TAG, "Connected via Reflection (Port 1)!")
             } catch (e2: Exception) {
                 Log.e(TAG, "Reflection connection also failed: ${e2.message}")
                 success = false
+                // Close failed socket
+                try {
+                    socketToUse?.close()
+                } catch (e3: IOException) {
+                    Log.w(TAG, "Error closing failed reflection socket: ${e3.message}")
+                }
+                socketToUse = null
             }
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception during connection: ${e.message}")
+            success = false
+            try {
+                socketToUse?.close()
+            } catch (e2: IOException) {
+                Log.w(TAG, "Error closing socket after security exception: ${e2.message}")
+            }
+            socketToUse = null
         }
 
-        if (success) {
+        if (success && socketToUse != null) {
+            bluetoothSocket = socketToUse
             inputStream = bluetoothSocket?.inputStream
             isConnected = true
+            isDisconnecting = false
             withContext(Dispatchers.Main) {
                 listener?.onConnected()
             }
+            Log.d(TAG, "Successfully connected to ${device.name} (${device.address})")
             return@withContext true
         } else {
             disconnect() // Cleanup
@@ -104,7 +156,7 @@ class BluetoothSppManager {
     /**
      * Start reading data from the connected device
      */
-    suspend fun startReading() = withContext(Dispatchers.IO) {
+    override suspend fun startReading() = withContext(Dispatchers.IO) {
         if (!isConnected || inputStream == null) {
             Log.w(TAG, "Not connected, cannot start reading")
             return@withContext
@@ -149,7 +201,7 @@ class BluetoothSppManager {
     /**
      * Stop reading data
      */
-    fun stopReading() {
+    override fun stopReading() {
         isReading = false
     }
 
@@ -157,8 +209,17 @@ class BluetoothSppManager {
      * Disconnect from the device
      * Force socket cleanup with try-catch to prevent crashes
      */
-    fun disconnect() {
+    override fun disconnect() {
+        // Prevent duplicate disconnection callbacks
+        if (isDisconnecting) {
+            Log.d(TAG, "Disconnection already in progress")
+            return
+        }
+        
+        val wasConnected = isConnected
+        
         try {
+            isDisconnecting = true
             isReading = false
             isConnected = false
             
@@ -181,7 +242,11 @@ class BluetoothSppManager {
             }
             
             Log.d(TAG, "Disconnected and cleaned up resources")
-            listener?.onDisconnected()
+            
+            // Only call onDisconnected if we were actually connected
+            if (wasConnected) {
+                listener?.onDisconnected()
+            }
         } catch (e: IOException) {
             Log.e(TAG, "IO error during disconnect: ${e.message}", e)
             // Ensure resources are cleared even if error occurs
@@ -192,18 +257,20 @@ class BluetoothSppManager {
             // Ensure resources are cleared even if error occurs
             inputStream = null
             bluetoothSocket = null
+        } finally {
+            isDisconnecting = false
         }
     }
 
     /**
      * Check if currently connected
      */
-    fun isConnected(): Boolean = isConnected
+    override fun isConnected(): Boolean = isConnected
 
     /**
      * Get paired Bluetooth devices
      */
-    fun getPairedDevices(adapter: BluetoothAdapter): Set<BluetoothDevice> {
+    override fun getPairedDevices(adapter: BluetoothAdapter): Set<BluetoothDevice> {
         return try {
             adapter.bondedDevices ?: emptySet()
         } catch (e: SecurityException) {

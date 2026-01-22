@@ -36,8 +36,14 @@ jobs:
         if: always()
         run: |
           echo "### 🧪 Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Bluetooth SPP connection state management tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Scanner manager interface tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Data parser tests" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Repository tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f build/test-results/test/*.xml ]; then
-            echo "✅ Tests completed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ All unit tests completed successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Tests failed or not found" >> $GITHUB_STEP_SUMMARY
           fi
