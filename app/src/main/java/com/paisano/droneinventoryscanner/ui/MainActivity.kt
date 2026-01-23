@@ -9,10 +9,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.os.IBinder
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -21,7 +23,9 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import com.paisano.droneinventoryscanner.R
 import com.paisano.droneinventoryscanner.databinding.ActivityMainBinding
+import com.paisano.droneinventoryscanner.overlay.OverlayService
 import com.paisano.droneinventoryscanner.service.ScannerService
+import com.paisano.droneinventoryscanner.session.SessionManager
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -71,6 +75,9 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Initialize SessionManager
+        SessionManager.init(this)
+        
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
@@ -79,6 +86,7 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
         setupUI()
         observeViewModel()
         requestNotificationPermission()
+        checkOverlayPermission()
     }
 
     override fun onStart() {
@@ -156,6 +164,29 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
                 != PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
+        }
+    }
+    
+    private fun checkOverlayPermission() {
+        if (!OverlayService.canDrawOverlays(this)) {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.overlay_permission_title)
+                .setMessage(R.string.overlay_permission_required)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
+                    openOverlaySettings()
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+    
+    private fun openOverlaySettings() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
         }
     }
 
@@ -255,26 +286,16 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
         }
 
         try {
-            // Create directory in Documents/DroneScans
-            val documentsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-            val droneScansDir = File(documentsDir, "DroneScans")
+            // Get filename prefix from session
+            val filenamePrefix = SessionManager.getFilenamePrefix()
             
-            if (!droneScansDir.exists()) {
-                droneScansDir.mkdirs()
-            }
-
-            // Create filename with timestamp
-            val dateFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-            val timestamp = dateFormat.format(Date())
-            val filename = "drone_scans_$timestamp.csv"
-            val file = File(droneScansDir, filename)
-
-            // Export
-            val success = repository.exportToCsv(file)
+            // Export to Downloads folder
+            val (success, filename) = repository.exportToCsvInDownloads(filenamePrefix)
             
-            if (success) {
+            if (success && filename != null) {
                 viewModel.setExportResult(true)
-                Toast.makeText(this, "Exported to: ${file.absolutePath}", Toast.LENGTH_LONG).show()
+                val message = getString(R.string.saved_in_downloads, filename)
+                Toast.makeText(this, message, Toast.LENGTH_LONG).show()
             } else {
                 viewModel.setExportResult(false, getString(R.string.export_failed))
             }

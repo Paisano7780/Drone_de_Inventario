@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <ImageView
+        android:id="@+id/ivSuccess"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:src="@android:drawable/checkbox_on_background"
+        android:tint="#4CAF50"
+        android:contentDescription="@string/last_scanned"
+        android:background="@android:drawable/dialog_holo_light_frame"
+        android:elevation="8dp" />
+
+</FrameLayout>
