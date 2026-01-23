@@ -48,4 +48,8 @@
     
     <!-- Export Messages -->
     <string name="saved_in_downloads">Guardado en Descargas: %1$s</string>
+    
+    <!-- Status HUD Messages -->
+    <string name="status_idle">Esperando lectura…</string>
+    <string name="status_success">Lectura Correcta:\n%1$s</string>
 </resources>

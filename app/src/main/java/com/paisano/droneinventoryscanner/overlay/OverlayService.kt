@@ -18,7 +18,7 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import com.paisano.droneinventoryscanner.R
 import com.paisano.droneinventoryscanner.databinding.OverlayDuplicateDecisionBinding
-import com.paisano.droneinventoryscanner.databinding.OverlaySuccessBinding
+import com.paisano.droneinventoryscanner.databinding.OverlayStatusBinding
 
 /**
  * OverlayService - Manages floating overlay UI for scan feedback
@@ -27,6 +27,7 @@ class OverlayService : Service() {
 
     companion object {
         private const val TAG = "OverlayService"
+        const val ACTION_SHOW_IDLE = "show_idle"
         const val ACTION_SHOW_SUCCESS = "show_success"
         const val ACTION_SHOW_DUPLICATE_DECISION = "show_duplicate_decision"
         const val ACTION_HIDE_ALL = "hide_all"
@@ -39,10 +40,19 @@ class OverlayService : Service() {
                    Settings.canDrawOverlays(context)
         }
         
-        fun showSuccess(context: Context) {
+        fun setIdleState(context: Context) {
+            if (!canDrawOverlays(context)) return
+            val intent = Intent(context, OverlayService::class.java).apply {
+                action = ACTION_SHOW_IDLE
+            }
+            context.startService(intent)
+        }
+        
+        fun setSuccessState(context: Context, code: String) {
             if (!canDrawOverlays(context)) return
             val intent = Intent(context, OverlayService::class.java).apply {
                 action = ACTION_SHOW_SUCCESS
+                putExtra(EXTRA_CODE, code)
             }
             context.startService(intent)
         }
@@ -70,9 +80,11 @@ class OverlayService : Service() {
     }
 
     private var windowManager: WindowManager? = null
-    private var successOverlayView: View? = null
+    private var statusOverlayView: View? = null
+    private var statusBinding: OverlayStatusBinding? = null
     private var duplicateOverlayView: View? = null
     private val handler = Handler(Looper.getMainLooper())
+    private var revertToIdleRunnable: Runnable? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -81,7 +93,11 @@ class OverlayService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_SHOW_SUCCESS -> showSuccessOverlay()
+            ACTION_SHOW_IDLE -> showIdleState()
+            ACTION_SHOW_SUCCESS -> {
+                val code = intent.getStringExtra(EXTRA_CODE) ?: ""
+                showSuccessState(code)
+            }
             ACTION_SHOW_DUPLICATE_DECISION -> {
                 val code = intent.getStringExtra(EXTRA_CODE) ?: ""
                 showDuplicateDecisionOverlay(code)
@@ -93,37 +109,79 @@ class OverlayService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    private fun showSuccessOverlay() {
+    private fun showIdleState() {
         handler.post {
             try {
-                // Remove existing success overlay if present
-                hideSuccessOverlay()
+                // Cancel any pending revert to idle
+                revertToIdleRunnable?.let { handler.removeCallbacks(it) }
                 
-                val binding = OverlaySuccessBinding.inflate(LayoutInflater.from(this))
-                successOverlayView = binding.root
-
-                val params = createOverlayParams(
-                    width = WindowManager.LayoutParams.WRAP_CONTENT,
-                    height = WindowManager.LayoutParams.WRAP_CONTENT,
-                    gravity = Gravity.TOP or Gravity.END,
-                    focusable = false // Display-only, no interaction needed
-                )
+                // Create or update the status overlay
+                if (statusOverlayView == null) {
+                    createStatusOverlay()
+                }
                 
-                params.x = 20
-                params.y = 100
-
-                windowManager?.addView(successOverlayView, params)
-                
-                // Fade out after 2 seconds
-                handler.postDelayed({
-                    fadeOutAndRemove(successOverlayView) {
-                        hideSuccessOverlay()
-                    }
-                }, 2000)
+                // Update to idle state
+                statusBinding?.apply {
+                    statusCard.setCardBackgroundColor(getColor(R.color.status_idle))
+                    tvStatusMessage.text = getString(R.string.status_idle)
+                    tvStatusMessage.setTextColor(getColor(R.color.black))
+                }
                 
             } catch (e: Exception) {
-                Log.e(TAG, "Error showing success overlay", e)
+                Log.e(TAG, "Error showing idle state", e)
             }
+        }
+    }
+
+    private fun showSuccessState(code: String) {
+        handler.post {
+            try {
+                // Cancel any pending revert to idle
+                revertToIdleRunnable?.let { handler.removeCallbacks(it) }
+                
+                // Create or update the status overlay
+                if (statusOverlayView == null) {
+                    createStatusOverlay()
+                }
+                
+                // Update to success state
+                statusBinding?.apply {
+                    statusCard.setCardBackgroundColor(getColor(R.color.status_success))
+                    tvStatusMessage.text = getString(R.string.status_success, code)
+                    tvStatusMessage.setTextColor(getColor(R.color.white))
+                }
+                
+                // Schedule revert to idle after 2 seconds
+                revertToIdleRunnable = Runnable {
+                    showIdleState()
+                }
+                handler.postDelayed(revertToIdleRunnable!!, 2000)
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Error showing success state", e)
+            }
+        }
+    }
+
+    private fun createStatusOverlay() {
+        try {
+            statusBinding = OverlayStatusBinding.inflate(LayoutInflater.from(this))
+            statusOverlayView = statusBinding?.root
+
+            val params = createOverlayParams(
+                width = WindowManager.LayoutParams.WRAP_CONTENT,
+                height = WindowManager.LayoutParams.WRAP_CONTENT,
+                gravity = Gravity.TOP or Gravity.END,
+                focusable = false // Display-only, no interaction needed
+            )
+            
+            params.x = 20
+            params.y = 100
+
+            windowManager?.addView(statusOverlayView, params)
+            
+        } catch (e: Exception) {
+            Log.e(TAG, "Error creating status overlay", e)
         }
     }
 
@@ -219,14 +277,15 @@ class OverlayService : Service() {
         }
     }
 
-    private fun hideSuccessOverlay() {
-        successOverlayView?.let {
+    private fun hideStatusOverlay() {
+        statusOverlayView?.let {
             try {
                 windowManager?.removeView(it)
             } catch (e: Exception) {
-                Log.e(TAG, "Error removing success overlay", e)
+                Log.e(TAG, "Error removing status overlay", e)
             }
-            successOverlayView = null
+            statusOverlayView = null
+            statusBinding = null
         }
     }
 
@@ -242,12 +301,21 @@ class OverlayService : Service() {
     }
 
     private fun hideAllOverlays() {
-        hideSuccessOverlay()
+        hideStatusOverlay()
         hideDuplicateOverlay()
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        revertToIdleRunnable?.let { handler.removeCallbacks(it) }
         hideAllOverlays()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "Task removed - cleaning up overlay")
+        revertToIdleRunnable?.let { handler.removeCallbacks(it) }
+        hideAllOverlays()
+        stopSelf()
     }
 }

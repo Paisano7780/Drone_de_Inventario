@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/statusCard"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_margin="16dp"
+    app:cardCornerRadius="32dp"
+    app:cardElevation="8dp"
+    android:background="@color/status_idle">
+
+    <TextView
+        android:id="@+id/tvStatusMessage"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/status_idle"
+        android:textColor="@color/black"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:padding="20dp"
+        android:minWidth="120dp"
+        android:minHeight="80dp" />
+
+</androidx.cardview.widget.CardView>

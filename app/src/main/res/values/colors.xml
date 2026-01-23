@@ -10,4 +10,6 @@
     <color name="dark_on_surface">#E0FFFFFF</color>
     <color name="status_connected">#FF4CAF50</color>
     <color name="status_disconnected">#FFF44336</color>
+    <color name="status_idle">#FFFFC107</color>
+    <color name="status_success">#FF4CAF50</color>
 </resources>
