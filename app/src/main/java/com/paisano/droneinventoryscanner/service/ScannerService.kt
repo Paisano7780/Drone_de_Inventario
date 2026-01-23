@@ -216,6 +216,8 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         
+        // Force the WindowManager to remove the floating bubbles
+        OverlayService.hideAllOverlays(this)
         OverlayService.duplicateDecisionCallback = null
         
         reconnectJob?.cancel()

@@ -55,6 +55,13 @@ class OverlayService : Service() {
             }
             context.startService(intent)
         }
+        
+        fun hideAllOverlays(context: Context) {
+            val intent = Intent(context, OverlayService::class.java).apply {
+                action = ACTION_HIDE_ALL
+            }
+            context.startService(intent)
+        }
     }
 
     interface DuplicateDecisionCallback {
