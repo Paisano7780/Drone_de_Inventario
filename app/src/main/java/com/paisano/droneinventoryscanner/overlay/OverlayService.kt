@@ -154,8 +154,9 @@ class OverlayService : Service() {
                 // Schedule revert to idle after 2 seconds
                 revertToIdleRunnable = Runnable {
                     showIdleState()
+                }.also { runnable ->
+                    handler.postDelayed(runnable, 2000)
                 }
-                handler.postDelayed(revertToIdleRunnable!!, 2000)
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error showing success state", e)
