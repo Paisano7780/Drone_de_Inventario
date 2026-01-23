@@ -10,15 +10,31 @@
     tools:context=".ui.MainActivity">
 
     <TextView
+        android:id="@+id/tvSessionInfo"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="@string/session_info_placeholder"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:textColor="@color/dark_primary"
+        android:gravity="center"
+        android:padding="12dp"
+        android:background="@color/dark_surface"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="16dp" />
+
+    <TextView
         android:id="@+id/tvConnectionLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/connection_status"
         android:textSize="18sp"
         android:textColor="@color/dark_on_surface"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSessionInfo"
         app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="32dp" />
+        android:layout_marginTop="24dp" />
 
     <TextView
         android:id="@+id/tvConnectionStatus"

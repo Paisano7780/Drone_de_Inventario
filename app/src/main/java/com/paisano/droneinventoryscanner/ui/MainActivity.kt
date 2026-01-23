@@ -106,6 +106,9 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
     }
 
     private fun setupUI() {
+        // Display session info
+        displaySessionInfo()
+        
         binding.btnConnectScanner.setOnClickListener {
             if (scannerService != null && viewModel.connectionStatus.value == MainViewModel.ConnectionStatus.CONNECTED) {
                 disconnectScanner()
@@ -117,6 +120,13 @@ class MainActivity : AppCompatActivity(), ScannerService.ServiceListener {
         binding.btnExportCsv.setOnClickListener {
             exportCsv()
         }
+    }
+
+    private fun displaySessionInfo() {
+        val cliente = SessionManager.getCliente() ?: "Unknown"
+        val sector = SessionManager.getSector() ?: "Unknown"
+        val sessionInfo = getString(R.string.session_info, cliente, sector)
+        binding.tvSessionInfo.text = sessionInfo
     }
 
     private fun observeViewModel() {
