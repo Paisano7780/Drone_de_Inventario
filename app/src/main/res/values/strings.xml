@@ -35,6 +35,8 @@
     <string name="field_required">Campo requerido</string>
     <string name="please_fill_all_fields">Por favor complete todos los campos</string>
     <string name="session_configured">Sesión configurada correctamente</string>
+    <string name="session_info_placeholder">Misión: --</string>
+    <string name="session_info">Misión: %1$s - %2$s</string>
     
     <!-- Overlay Messages -->
     <string name="code_repeated">CÓDIGO REPETIDO: %1$s</string>
