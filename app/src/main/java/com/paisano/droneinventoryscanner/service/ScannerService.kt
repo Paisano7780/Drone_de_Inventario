@@ -9,6 +9,8 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.Intent
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
@@ -66,6 +68,7 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
     
     private var textToSpeech: TextToSpeech? = null
     private var ttsInitialized = false
+    private var toneGenerator: ToneGenerator? = null
     
     private var currentDevice: BluetoothDevice? = null
     private var reconnectJob: Job? = null
@@ -84,6 +87,13 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         // Initialize TTS
         textToSpeech = TextToSpeech(this, this)
         
+        // Initialize ToneGenerator for audio feedback
+        try {
+            toneGenerator = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to initialize ToneGenerator", e)
+        }
+        
         // Set up Bluetooth manager
         bluetoothManager.setConnectionListener(this)
         
@@ -91,6 +101,7 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         OverlayService.duplicateDecisionCallback = object : OverlayService.DuplicateDecisionCallback {
             override fun onLoadAnyway(code: String) {
                 scanRepository.forceAddScan(code)
+                playSuccessBeep()
                 speak("Correcto")
                 listener?.onScanReceived(code, false)
             }
@@ -216,11 +227,29 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         textToSpeech?.stop()
         textToSpeech?.shutdown()
         
+        toneGenerator?.release()
+        toneGenerator = null
+        
         // Force the WindowManager to remove the floating bubbles
         OverlayService.hideAllOverlays(this)
         OverlayService.duplicateDecisionCallback = null
         
         reconnectJob?.cancel()
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        Log.d(TAG, "Task removed - cleaning up scanner service")
+        
+        // Clean up overlay UI
+        OverlayService.hideAllOverlays(this)
+        
+        // Disconnect Bluetooth
+        bluetoothManager.stopReading()
+        bluetoothManager.disconnect()
+        
+        // Stop the service
+        stopSelf()
     }
 
     // BluetoothSppManager.ConnectionListener implementation
@@ -231,6 +260,9 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
         updateNotification("Scanner Connected")
         speak("Escáner Conectado")
         listener?.onConnectionStatusChanged(true)
+        
+        // Show idle state overlay when connected
+        OverlayService.setIdleState(this)
     }
 
     override fun onDisconnected() {
@@ -256,8 +288,12 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
                 ScanRepository.DuplicateStatus.NEW -> {
                     // New code, add it
                     scanRepository.addScan(cleanedCode)
+                    
+                    // Play success beep
+                    playSuccessBeep()
+                    
                     speak("Correcto")
-                    OverlayService.showSuccess(this)
+                    OverlayService.setSuccessState(this, cleanedCode)
                     listener?.onScanReceived(cleanedCode, false)
                 }
                 ScanRepository.DuplicateStatus.JITTER -> {
@@ -300,6 +336,14 @@ class ScannerService : Service(), IScannerManager.ConnectionListener, OnInitList
     private fun speak(text: String) {
         if (ttsInitialized) {
             textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        }
+    }
+
+    private fun playSuccessBeep() {
+        try {
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to play beep", e)
         }
     }
 
