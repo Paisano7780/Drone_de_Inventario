@@ -26,11 +26,14 @@ jobs:
           java-version: '17'
           cache: 'gradle'
       
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       
       - name: Run unit tests
-        run: ./gradlew -b build-simple.gradle.kts test --no-daemon
+        run: ./gradlew testDebugUnitTest --no-daemon
         
       - name: Test Summary
         if: always()
@@ -42,7 +45,7 @@ jobs:
           echo "✅ Data parser tests" >> $GITHUB_STEP_SUMMARY
           echo "✅ Repository tests" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f build/test-results/test/*.xml ]; then
+          if [ -f app/build/test-results/testDebugUnitTest/*.xml ]; then
             echo "✅ All unit tests completed successfully" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Tests failed or not found" >> $GITHUB_STEP_SUMMARY
